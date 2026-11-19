@@ -1,0 +1,125 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated user profile and portal access status for a True Ryze user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID of the user." },
+        "displayName": { "type": "string", "description": "User display name." },
+        "email": { "type": "string", "description": "User Google account email." },
+        "photoUrl": { "type": "string", "description": "Optional Google profile photo URL." },
+        "businessName": { "type": "string", "description": "Optional business or startup name." },
+        "clientStatus": { "type": "string", "enum": ["visitor", "pending", "active"], "description": "Portal verification status." },
+        "tier": { "type": "string", "enum": ["Starter", "Bronze", "Silver", "Gold", "Platinum"], "description": "Loyalty bond tier." },
+        "bonds": { "type": "integer", "description": "Accumulated client bonds." },
+        "loyaltyPoints": { "type": "integer", "description": "Accumulated loyalty points." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on creation." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on last update." }
+      },
+      "required": ["userId", "displayName", "email", "clientStatus", "tier", "bonds", "loyaltyPoints", "createdAt", "updatedAt"]
+    },
+    "Enquiry": {
+      "title": "Enquiry",
+      "description": "Website development or maintenance project enquiry submitted by a user.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Contact name." },
+        "email": { "type": "string", "description": "Contact email." },
+        "businessName": { "type": "string", "description": "Optional business name." },
+        "serviceType": { "type": "string", "enum": ["Website development", "Website maintenance", "Both", "Not sure yet"] },
+        "plan": { "type": "string", "enum": ["", "Not sure yet", "Launch", "Grow", "Scale"] },
+        "budget": { "type": "string", "description": "Optional budget range." },
+        "message": { "type": "string", "description": "Project requirements description." },
+        "status": { "type": "string", "enum": ["submitted", "reviewed", "archived"] },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on creation." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on update." }
+      },
+      "required": ["name", "email", "serviceType", "message", "status", "createdAt", "updatedAt"]
+    },
+    "JobApplication": {
+      "title": "JobApplication",
+      "description": "General career application submitted to True Ryze.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Applicant name." },
+        "email": { "type": "string", "description": "Applicant email." },
+        "role": { "type": "string", "description": "Role of interest." },
+        "portfolioUrl": { "type": "string", "description": "Optional https portfolio or resume link." },
+        "message": { "type": "string", "description": "About the applicant." },
+        "status": { "type": "string", "enum": ["received", "reviewed"] },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on creation." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on update." }
+      },
+      "required": ["name", "email", "message", "status", "createdAt", "updatedAt"]
+    },
+    "AccessRequest": {
+      "title": "AccessRequest",
+      "description": "Client Portal ID access request submitted after deal agreement.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Requester name." },
+        "email": { "type": "string", "description": "Requester email." },
+        "businessName": { "type": "string", "description": "Optional business name." },
+        "dealDetails": { "type": "string", "description": "Agreed service and reference details." },
+        "status": { "type": "string", "enum": ["pending_review", "approved"] },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on creation." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on update." }
+      },
+      "required": ["name", "email", "dealDetails", "status", "createdAt", "updatedAt"]
+    },
+    "SupportTicket": {
+      "title": "SupportTicket",
+      "description": "Support request filed from the Client Portal.",
+      "type": "object",
+      "properties": {
+        "category": { "type": "string", "enum": ["Website issue", "Content change", "Billing", "Other"] },
+        "priority": { "type": "string", "enum": ["Normal", "Urgent"] },
+        "projectRef": { "type": "string", "description": "Optional project reference." },
+        "message": { "type": "string", "description": "Issue or request description." },
+        "status": { "type": "string", "enum": ["open", "closed"] },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on creation." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on update." }
+      },
+      "required": ["category", "priority", "message", "status", "createdAt", "updatedAt"]
+    },
+    "PortalMessage": {
+      "title": "PortalMessage",
+      "description": "Direct client message stored in the Client Portal.",
+      "type": "object",
+      "properties": {
+        "body": { "type": "string", "description": "Message body." },
+        "sender": { "type": "string", "enum": ["client"] },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on creation." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on update." }
+      },
+      "required": ["body", "sender", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profile and portal metadata owned exclusively by userId."
+    },
+    "/users/{userId}/enquiries/{enquiryId}": {
+      "schema": { "$ref": "#/entities/Enquiry" },
+      "description": "Project enquiries scoped to the authenticated user."
+    },
+    "/users/{userId}/applications/{applicationId}": {
+      "schema": { "$ref": "#/entities/JobApplication" },
+      "description": "Career applications scoped to the authenticated user."
+    },
+    "/users/{userId}/access_requests/{requestId}": {
+      "schema": { "$ref": "#/entities/AccessRequest" },
+      "description": "Client portal access requests scoped to the authenticated user."
+    },
+    "/users/{userId}/support_tickets/{ticketId}": {
+      "schema": { "$ref": "#/entities/SupportTicket" },
+      "description": "Support tickets scoped to the authenticated user."
+    },
+    "/users/{userId}/portal_messages/{messageId}": {
+      "schema": { "$ref": "#/entities/PortalMessage" },
+      "description": "Portal messages scoped to the authenticated user."
+    }
+  }
+}

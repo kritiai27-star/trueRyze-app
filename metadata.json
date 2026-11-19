@@ -1,0 +1,6 @@
+{
+  "name": "True Ryze",
+  "description": "TRUE RYZE digital solutions platform: website development, maintenance, 10-stage project tracking, client portal, and AI scoping assistant.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

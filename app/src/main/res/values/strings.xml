@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">True Ryze</string>
+    <string name="brand_title">TRUE RYZE</string>
+    <string name="brand_tagline">Websites that help your business rise</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_services">Services</string>
+    <string name="nav_pricing">Pricing</string>
+    <string name="nav_connect">Connect</string>
+    <string name="nav_portal">Portal</string>
+    <string name="cd_brand_logo">TRUE RYZE metallic emblem logo</string>
+    <string name="cd_handshake_animation">Interactive handshake animation, tap to replay handshake</string>
+    <string name="cd_lamp_scene">Interactive studio lamp illustration, flip the switch to illuminate</string>
+    <string name="cd_back">Navigate back</string>
+    <string name="cd_send_message">Send message</string>
+    <string name="cd_profile_avatar">User profile picture</string>
+    <string name="legal_privacy_title">Privacy &amp; Terms</string>
+</resources>

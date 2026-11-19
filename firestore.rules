@@ -1,0 +1,217 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pillar 0: Default-deny global catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidTimestamp(ts) {
+      return ts is timestamp && ts <= request.time;
+    }
+
+    function isValidUserProfile(data, userId) {
+      return data.userId == userId &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 100 &&
+             data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+             (!('photoUrl' in data) || (data.photoUrl is string && data.photoUrl.size() <= 500)) &&
+             (!('businessName' in data) || (data.businessName is string && data.businessName.size() <= 120)) &&
+             data.clientStatus in ['visitor', 'pending', 'active'] &&
+             data.tier in ['Starter', 'Bronze', 'Silver', 'Gold', 'Platinum'] &&
+             data.bonds is int && data.bonds >= 0 && data.bonds <= 1000 &&
+             data.loyaltyPoints is int && data.loyaltyPoints >= 0 && data.loyaltyPoints <= 1000000;
+    }
+
+    function isValidEnquiry(data) {
+      return data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+             data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+             (!('businessName' in data) || (data.businessName is string && data.businessName.size() <= 120)) &&
+             data.serviceType in ['Website development', 'Website maintenance', 'Both', 'Not sure yet'] &&
+             (!('plan' in data) || data.plan in ['', 'Not sure yet', 'Launch', 'Grow', 'Scale']) &&
+             (!('budget' in data) || (data.budget is string && data.budget.size() <= 60)) &&
+             data.message is string && data.message.size() >= 1 && data.message.size() <= 2000 &&
+             data.status in ['submitted', 'reviewed', 'archived'];
+    }
+
+    function isValidApplication(data) {
+      return data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+             data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+             (!('role' in data) || (data.role is string && data.role.size() <= 120)) &&
+             (!('portfolioUrl' in data) || (data.portfolioUrl is string && data.portfolioUrl.size() <= 300)) &&
+             data.message is string && data.message.size() >= 1 && data.message.size() <= 2000 &&
+             data.status in ['received', 'reviewed'];
+    }
+
+    function isValidAccessRequest(data) {
+      return data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+             data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+             (!('businessName' in data) || (data.businessName is string && data.businessName.size() <= 120)) &&
+             data.dealDetails is string && data.dealDetails.size() >= 1 && data.dealDetails.size() <= 2000 &&
+             data.status in ['pending_review', 'approved'];
+    }
+
+    function isValidSupportTicket(data) {
+      return data.category in ['Website issue', 'Content change', 'Billing', 'Other'] &&
+             data.priority in ['Normal', 'Urgent'] &&
+             (!('projectRef' in data) || (data.projectRef is string && data.projectRef.size() <= 80)) &&
+             data.message is string && data.message.size() >= 1 && data.message.size() <= 2000 &&
+             data.status in ['open', 'closed'];
+    }
+
+    function isValidPortalMessage(data) {
+      return data.body is string && data.body.size() >= 1 && data.body.size() <= 2000 &&
+             data.sender == 'client';
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidUserProfile(incoming(), userId) &&
+                       incoming().clientStatus == 'visitor' &&
+                       incoming().tier == 'Starter' &&
+                       incoming().bonds == 0 &&
+                       incoming().loyaltyPoints == 0 &&
+                       incoming().keys().hasAll(['userId', 'displayName', 'email', 'clientStatus', 'tier', 'bonds', 'loyaltyPoints', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'displayName', 'email', 'photoUrl', 'businessName', 'clientStatus', 'tier', 'bonds', 'loyaltyPoints', 'createdAt', 'updatedAt']) &&
+                       isValidTimestamp(incoming().createdAt) &&
+                       isValidTimestamp(incoming().updatedAt);
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidUserProfile(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().clientStatus == existing().clientStatus &&
+                       incoming().tier == existing().tier &&
+                       incoming().bonds == existing().bonds &&
+                       incoming().loyaltyPoints == existing().loyaltyPoints &&
+                       isValidTimestamp(incoming().updatedAt) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'email', 'photoUrl', 'businessName', 'updatedAt']);
+
+      allow delete: if false;
+
+      match /enquiries/{enquiryId} {
+        allow get: if isOwner(userId) && isValidId(enquiryId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(enquiryId) &&
+                         isValidEnquiry(incoming()) &&
+                         incoming().status == 'submitted' &&
+                         incoming().keys().hasAll(['name', 'email', 'serviceType', 'message', 'status', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['name', 'email', 'businessName', 'serviceType', 'plan', 'budget', 'message', 'status', 'createdAt', 'updatedAt']) &&
+                         isValidTimestamp(incoming().createdAt) &&
+                         isValidTimestamp(incoming().updatedAt);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(enquiryId) &&
+                         isValidEnquiry(incoming()) &&
+                         existing().status != 'archived' &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['businessName', 'serviceType', 'plan', 'budget', 'message', 'status', 'updatedAt']) &&
+                         incoming().status in ['submitted', 'archived'];
+
+        allow delete: if isOwner(userId) && isValidId(enquiryId);
+      }
+
+      match /applications/{applicationId} {
+        allow get: if isOwner(userId) && isValidId(applicationId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(applicationId) &&
+                         isValidApplication(incoming()) &&
+                         incoming().status == 'received' &&
+                         incoming().keys().hasAll(['name', 'email', 'message', 'status', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['name', 'email', 'role', 'portfolioUrl', 'message', 'status', 'createdAt', 'updatedAt']) &&
+                         isValidTimestamp(incoming().createdAt) &&
+                         isValidTimestamp(incoming().updatedAt);
+
+        allow update: if false;
+        allow delete: if isOwner(userId) && isValidId(applicationId);
+      }
+
+      match /access_requests/{requestId} {
+        allow get: if isOwner(userId) && isValidId(requestId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(requestId) &&
+                         isValidAccessRequest(incoming()) &&
+                         incoming().status == 'pending_review' &&
+                         incoming().keys().hasAll(['name', 'email', 'dealDetails', 'status', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['name', 'email', 'businessName', 'dealDetails', 'status', 'createdAt', 'updatedAt']) &&
+                         isValidTimestamp(incoming().createdAt) &&
+                         isValidTimestamp(incoming().updatedAt);
+
+        allow update: if false;
+        allow delete: if isOwner(userId) && isValidId(requestId);
+      }
+
+      match /support_tickets/{ticketId} {
+        allow get: if isOwner(userId) && isValidId(ticketId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(ticketId) &&
+                         isValidSupportTicket(incoming()) &&
+                         incoming().status == 'open' &&
+                         incoming().keys().hasAll(['category', 'priority', 'message', 'status', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['category', 'priority', 'projectRef', 'message', 'status', 'createdAt', 'updatedAt']) &&
+                         isValidTimestamp(incoming().createdAt) &&
+                         isValidTimestamp(incoming().updatedAt);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(ticketId) &&
+                         isValidSupportTicket(incoming()) &&
+                         existing().status != 'closed' &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidTimestamp(incoming().updatedAt) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']) &&
+                         incoming().status == 'closed';
+
+        allow delete: if isOwner(userId) && isValidId(ticketId);
+      }
+
+      match /portal_messages/{messageId} {
+        allow get: if isOwner(userId) && isValidId(messageId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(messageId) &&
+                         isValidPortalMessage(incoming()) &&
+                         incoming().keys().hasAll(['body', 'sender', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['body', 'sender', 'createdAt', 'updatedAt']) &&
+                         isValidTimestamp(incoming().createdAt) &&
+                         isValidTimestamp(incoming().updatedAt);
+
+        allow update: if false;
+        allow delete: if isOwner(userId) && isValidId(messageId);
+      }
+    }
+  }
+}
